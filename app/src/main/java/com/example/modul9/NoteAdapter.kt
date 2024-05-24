@@ -55,7 +55,7 @@ class NoteAdapter(
                         .getReference("users").child(userId).child("notes")
                     databaseRef.child(noteToDelete.id!!).removeValue().await()
                     withContext(Dispatchers.Main) {
-                        noteList.removeAt(position)
+//                        noteList.removeAt(position)
 //                    notifyItemRemoved(position)
                         dataChangeListener?.onDataChange()
                         notifyItemRangeChanged(position, noteList.size)
