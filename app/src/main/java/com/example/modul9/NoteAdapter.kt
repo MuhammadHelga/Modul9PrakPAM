@@ -19,6 +19,8 @@ import kotlinx.coroutines.withContext
 class NoteAdapter(
     private val context: Context,
     private val noteList: MutableList<Note>,
+    private val dataChangeListener: DataChangeListener? = null
+
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -32,7 +34,7 @@ class NoteAdapter(
         return NoteViewHolder(itemView)
     }
 
-    override fun onBindViewHolder(holder: NoteAdapter.NoteViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
         val currentNote = noteList[position]
         holder.itemView.setOnClickListener {
             val intent = Intent(context, viewNotes::class.java)
@@ -43,17 +45,21 @@ class NoteAdapter(
         }
 
         holder.delNotes.setOnClickListener {
-            val noteToDelete = noteList[position]
-            CoroutineScope(Dispatchers.IO).launch {
-                val currentUser = FirebaseAuth.getInstance().currentUser
-                val userId = currentUser!!.uid
-                val databaseRef = FirebaseDatabase.getInstance("https://prakpam-ef343-default-rtdb.asia-southeast1.firebasedatabase.app/")
-                    .getReference("users").child(userId).child("notes")
-                databaseRef.child(noteToDelete.id!!).removeValue().await()
-                withContext(Dispatchers.Main) {
-                    noteList.removeAt(position)
-                    notifyItemRemoved(position)
-                    notifyItemRangeChanged(position, noteList.size)
+            val itemPosition = holder.adapterPosition
+            if (itemPosition != RecyclerView.NO_POSITION) {
+                val noteToDelete = noteList[position]
+                CoroutineScope(Dispatchers.IO).launch {
+                    val currentUser = FirebaseAuth.getInstance().currentUser
+                    val userId = currentUser!!.uid
+                    val databaseRef = FirebaseDatabase.getInstance("https://prakpam-ef343-default-rtdb.asia-southeast1.firebasedatabase.app/")
+                        .getReference("users").child(userId).child("notes")
+                    databaseRef.child(noteToDelete.id!!).removeValue().await()
+                    withContext(Dispatchers.Main) {
+                        noteList.removeAt(position)
+//                    notifyItemRemoved(position)
+                        dataChangeListener?.onDataChange()
+                        notifyItemRangeChanged(position, noteList.size)
+                    }
                 }
             }
         }
@@ -63,5 +69,9 @@ class NoteAdapter(
     override fun getItemCount(): Int {
         return noteList.size
     }
+}
+
+interface DataChangeListener {
+    fun onDataChange()
 }
 
