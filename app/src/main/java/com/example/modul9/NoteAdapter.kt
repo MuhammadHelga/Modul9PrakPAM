@@ -39,8 +39,8 @@ class NoteAdapter(
         holder.itemView.setOnClickListener {
             val intent = Intent(context, viewNotes::class.java)
             intent.putExtra("id", currentNote.id)
-            intent.putExtra("judul", currentNote.title)
-            intent.putExtra("desk", currentNote.description)
+            intent.putExtra("title", currentNote.title)
+            intent.putExtra("description", currentNote.description)
             context.startActivity(intent)
         }
 
@@ -55,8 +55,6 @@ class NoteAdapter(
                         .getReference("users").child(userId).child("notes")
                     databaseRef.child(noteToDelete.id!!).removeValue().await()
                     withContext(Dispatchers.Main) {
-//                        noteList.removeAt(position)
-//                    notifyItemRemoved(position)
                         dataChangeListener?.onDataChange()
                         notifyItemRangeChanged(position, noteList.size)
                     }

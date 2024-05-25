@@ -1,6 +1,5 @@
 package com.example.modul9
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -8,10 +7,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.CoroutineScope
@@ -21,52 +18,80 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class viewNotes : AppCompatActivity() {
-    @SuppressLint("MissingInflatedId")
+
     private var noteId: String? = null
     private lateinit var notedb: DatabaseReference
+    private lateinit var viewTitle: TextView
+    private lateinit var viewDesc: TextView
+    private lateinit var updateNote: Button
+    private lateinit var linearUpdate: LinearLayout
+    private lateinit var upTitle: EditText
+    private lateinit var upDesc: EditText
+    private lateinit var btnUpdateNote: Button
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_notes)
         val bundle: Bundle? = intent.extras
 
-        val viewTittle: TextView = findViewById(R.id.vTittle)
-        val viewDesc: TextView = findViewById(R.id.vDesc)
-        val updateNote: Button = findViewById(R.id.btn_update)
+        viewTitle = findViewById(R.id.vTittle)
+        viewDesc = findViewById(R.id.vDesc)
+        updateNote = findViewById(R.id.btn_update)
         val keluar: Button = findViewById(R.id.btn_ext)
-        val linear_update: LinearLayout = findViewById(R.id.lin_upt)
-        val upTitle: EditText = findViewById(R.id.upt_tittle)
-        val upDesc: EditText = findViewById(R.id.upt_desc)
-        val btnUpdateNote: Button = findViewById(R.id.btUp)
+        linearUpdate = findViewById(R.id.lin_upt)
+        upTitle = findViewById(R.id.upt_tittle)
+        upDesc = findViewById(R.id.upt_desc)
+        btnUpdateNote = findViewById(R.id.btUp)
 
-        notedb = FirebaseDatabase.getInstance("https://prakpam-ef343-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("notes")
-        noteId = bundle?.getString("id")
+        val title = bundle!!.getString("title")
+        val desc = bundle.getString("description")
+        noteId = bundle.getString("id")
 
-        viewTittle.text = bundle?.getString("judul")
-        viewDesc.text = bundle?.getString("desk")
+        viewTitle.text = title
+        viewDesc.text = desc
+
+        notedb = FirebaseDatabase.getInstance("https://prakpam-ef343-default-rtdb.asia-southeast1.firebasedatabase.app/")
+            .getReference("users").child(FirebaseAuth.getInstance().currentUser!!.uid).child("notes").child(noteId!!)
+
+        updateNote.setOnClickListener {
+            linearUpdate.visibility = View.VISIBLE
+            viewTitle.visibility = View.GONE
+            viewDesc.visibility = View.GONE
+            upTitle.setText(viewTitle.text)
+            upDesc.setText(viewDesc.text)
+        }
+
+        btnUpdateNote.setOnClickListener {
+            updateNote()
+        }
 
         keluar.setOnClickListener {
             finish()
         }
+    }
 
-        updateNote.setOnClickListener {
-            linear_update.visibility = View.VISIBLE
-            upTitle.setText(viewTittle.text)
-            upDesc.setText(viewDesc.text)
-            btnUpdateNote.setOnClickListener {
-                val newTitle = upTitle.text.toString()
-                val newDesc = upDesc.text.toString()
-                CoroutineScope(Dispatchers.IO).launch {
-                    if (noteId != null) {
-                        notedb.child(noteId!!).child("title").setValue(newTitle).await()
-                        notedb.child(noteId!!).child("description").setValue(newDesc).await()
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@viewNotes, "Note updated successfully", Toast.LENGTH_SHORT).show()
-                            viewTittle.text = newTitle
-                            viewDesc.text = newDesc
-                            linear_update.visibility = View.GONE
-                        }
-                    }
-                }
+    private fun updateNote() {
+        val updatedTitle = upTitle.text.toString()
+        val updatedDesc = upDesc.text.toString()
+
+        if (updatedTitle.isEmpty() || updatedDesc.isEmpty()) {
+            Toast.makeText(this, "Title and description cannot be empty", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val note = mapOf(
+                "title" to updatedTitle,
+                "description" to updatedDesc
+            )
+            notedb.updateChildren(note).await()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@viewNotes, "Note updated successfully", Toast.LENGTH_SHORT).show()
+                linearUpdate.visibility = View.GONE
+                viewTitle.visibility = View.VISIBLE
+                viewDesc.visibility = View.VISIBLE
+                viewTitle.text = updatedTitle
+                viewDesc.text = updatedDesc
             }
         }
     }
